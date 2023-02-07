@@ -1,0 +1,6 @@
+{
+    "audioCues.lineHasError": "off",
+    "audioCues.lineHasWarning": "off",
+    "audioCues.noInlayHints": "on",
+    "audioCues.lineHasInlineSuggestion": "off"
+}
