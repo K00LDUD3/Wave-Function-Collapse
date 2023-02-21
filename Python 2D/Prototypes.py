@@ -1,5 +1,4 @@
 import numpy as np
-from cachetools import Cache, LRUCache
 from PIL import Image
 
 class Prototype:
@@ -19,3 +18,20 @@ class Prototype:
         temp = np.array(self.img.convert("L"))
         return temp
 
+    @property
+    def EdgePixels(self):
+        edges = []
+        temp = self.Img_inf
+        st_w, st_h = temp.shape
+        #North
+        edges.append(temp[0].tolist())
+        #East
+        edges.append(np.transpose(temp)[st_w-1].tolist()[::-1])
+        #South
+        edges.append(temp[st_h-1].tolist()[::-1])
+        #West
+        edges.append(np.transpose(temp)[0].tolist()[::-1])
+        return edges
+    
+    # @property
+    # def Shift(self):

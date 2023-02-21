@@ -5,10 +5,9 @@ import math
 import matplotlib.pyplot as plt
 from utility import GetBin, GetByteMask, GetInt
 from Prototypes import Prototype
-from cachetools import Cache, LRUCache
 
 
-inp_img = Image.open("Sample7.png")
+inp_img = Image.open("Sample.png")
 img_bw = inp_img.convert("L")
 img_arr = np.array(img_bw)
 
@@ -19,29 +18,28 @@ rows, cols = 30, 30
 Map = np.full((rows, cols), -1)
 # st -> Sample Tile
 
-st_w = 2
-st_h = 2
-st_rows = int(inp_img.size[0]/st_w)
-st_cols = int(inp_img.size[1]/st_h)
+st_w = 3
+st_h = 3
+st_rows = int(inp_img.size[0]//st_w)
+st_cols = int(inp_img.size[1]//st_h)
 
-#Creating patches 2x2 
+#Creating patches st_w x st_h 
 img_info_list = np.full((st_rows, st_cols, st_w, st_h), -1)
 tile_img_list = np.ndarray((st_rows, st_cols)).tolist()
 tile_img_codes = np.ndarray((st_rows, st_cols)).tolist()
 for i in range(st_rows):
     for j in range(st_cols):
-        img_info_list[i][j][0][0] = img_arr[i*st_w][j*st_h]
-        img_info_list[i][j][0][1] = img_arr[i*st_w][j*st_h+1]
-        img_info_list[i][j][1][0] = img_arr[i*st_w+1][j*st_h]
-        img_info_list[i][j][1][1] = img_arr[i*st_w+1][j*st_h+1]
+        for x in range(st_w):
+            for y in range(st_h):
+                img_info_list[i][j][x][y] = img_arr[i*st_w+x][j*st_h+y]
         temp = Image.fromarray(img_info_list[i][j].astype('uint8')).convert("1")
         tile_img_list[i][j] = temp
 
 def ImgMatch(img1, img2):
     return (np.array(img1) == np.array(img2)).all()
 
-#Instantiating prototypes for each cell
-protos = {}
+#Instantiating prototypes for each cell without repetition of same tiles
+protos : Prototype = {}
 for i in range(st_rows):
     for j in range(st_cols):
         #getting neighbor cells coordinates from the tile set
@@ -67,12 +65,20 @@ for i in range(st_rows):
         else:
             protos[Prototype.code] = Prototype(tile_img_list[i][j], N, E, S, W)
             tile_img_codes[i][j] = Prototype.code
-            print(tile_img_codes)
-            print(protos[Prototype.code].Img_inf)
-        
 
-# print(protos[0].N)
-
+#Iterating thru all prototypes to a side base neighbor 
+for k1 in list(protos.keys()):
+    for k2 in list(protos.keys())[k1+1:]:
+        print(f"Compare: {k1},{k2}")
+        #Getting edge pixels of k1 and k2 in list [N, E, S, w]
+        k1_px_edges = protos[k1].EdgePixels
+        k2_px_edges = protos[k2].EdgePixels
+        valid_rotation_indices = [[],[],[],[]]
+        for dir_k1, k1val in enumerate(k1_px_edges):
+            for dir_k2e, k2val in enumerate(k2_px_edges):
+                if k1val == k2val:
+                    valid_rotation_indices[dir_k1].append((dir_k2e-dir_k1))
+        print(valid_rotation_indices)
 
 #Displaying the tile set
 f, axarr = plt.subplots(st_rows, st_cols)
@@ -81,7 +87,7 @@ for i in range(st_rows):
     for j in range(st_cols):
         axarr[i,j].imshow(tile_img_list[i][j], interpolation='none')
         plt.axis('off')
-
+plt.show()
 
 candidates = np.full((rows, cols, len(protos.keys())), list(protos.keys())).tolist()
 
@@ -104,7 +110,6 @@ def FixTile(x,y):
 def GetCodeFromCoor(l : list):
     #Gets coor from a list of coordinates
     x = list(set([tile_img_codes[i[0]][i[1]] for i in l]))
-    print(f"{x=}")
     return x 
 
 def UpdateNCandidates(c_cell : list):
@@ -163,21 +168,18 @@ def Propogate():
     UpdateNCandidates(c_cell=c_cell)
 
     return
-while MinEntropy() != -1:
-    Propogate()
-plt.show()
+# while MinEntropy() != -1:
+#    Propogate()
 
 def Plot():
     final_arr = np.ndarray((rows*st_w, cols*st_h))
     for i in range(rows):
         for j in range(cols):
-            temp = protos[Map[i][j]].Img_inf
-            final_arr[i*st_w][j*st_h] = temp[0][0]
-            final_arr[i*st_w][j*st_h+1] = temp[0][1]
-            final_arr[i*st_w+1][j*st_h] = temp[1][0]
-            final_arr[i*st_w+1][j*st_h+1] = temp[1][1]
+            temp = protos[Map[i][j]].Img_inf.copy()
+            for x in range(st_w):
+                for y in range(st_h):
+                    final_arr[i*st_w + x][j*st_h + y] = temp[x][y]
     final_arr = final_arr.astype(int)
-    print(final_arr)
     fimg = Image.fromarray(final_arr.astype('uint8'))
     fimg.show()
-Plot()
+# Plot()
