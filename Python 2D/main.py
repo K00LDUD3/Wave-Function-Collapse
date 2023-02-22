@@ -7,7 +7,7 @@ from utility import GetBin, GetByteMask, GetInt
 from Prototypes import Prototype
 
 
-inp_img = Image.open("Sample.png")
+inp_img = Image.open("caves.png")
 img_bw = inp_img.convert("L")
 img_arr = np.array(img_bw)
 
@@ -48,37 +48,31 @@ for i in range(st_rows):
         S = [(i+1)%st_rows, j]
         W = [i,(j-1)%st_cols]
 
-        #Checking if image matches with another existing image in the prototypes dictionary
-        img = tile_img_list[i][j]
-        flag = False
-        match_key = ''
-        for key in range(len(protos.keys())):
-            if ImgMatch(img, protos[key].img):
-                flag = True
-                match_key = key
-        if flag:
-            protos[match_key].N.append(N)
-            protos[match_key].E.append(E)
-            protos[match_key].S.append(S)
-            protos[match_key].W.append(W)
-            tile_img_codes[i][j] = protos[match_key].cd
-        else:
-            protos[Prototype.code] = Prototype(tile_img_list[i][j], N, E, S, W)
-            tile_img_codes[i][j] = Prototype.code
+        # #Checking if image matches with another existing image in the prototypes dictionary
+        # img = tile_img_list[i][j]
+        # flag = False
+        # match_key = ''
+        # for key in range(len(protos.keys())):
+        #     if ImgMatch(img, protos[key].img):
+        #         flag = True
+        #         match_key = key
+        # if flag:
+        #     protos[match_key].N.append(N)
+        #     protos[match_key].E.append(E)
+        #     protos[match_key].S.append(S)
+        #     protos[match_key].W.append(W)
+        #     tile_img_codes[i][j] = protos[match_key].cd
+        # else:
+        protos[Prototype.code] = Prototype(tile_img_list[i][j], N, E, S, W)
+        tile_img_codes[i][j] = Prototype.code
 
-#Iterating thru all prototypes to a side base neighbor 
-for k1 in list(protos.keys()):
-    for k2 in list(protos.keys())[k1+1:]:
-        print(f"Compare: {k1},{k2}")
-        #Getting edge pixels of k1 and k2 in list [N, E, S, w]
-        k1_px_edges = protos[k1].EdgePixels
-        k2_px_edges = protos[k2].EdgePixels
-        valid_rotation_indices = [[],[],[],[]]
-        for dir_k1, k1val in enumerate(k1_px_edges):
-            for dir_k2e, k2val in enumerate(k2_px_edges):
-                if k1val == k2val:
-                    valid_rotation_indices[dir_k1].append((dir_k2e-dir_k1))
-        print(valid_rotation_indices)
+#Adding xtras
+for key in protos.keys():
+    print(f"{key=}")
+    curr_x = key//st_rows
+    curr_y = key%st_cols
+    
+
 
 #Displaying the tile set
 f, axarr = plt.subplots(st_rows, st_cols)
@@ -168,8 +162,8 @@ def Propogate():
     UpdateNCandidates(c_cell=c_cell)
 
     return
-# while MinEntropy() != -1:
-#    Propogate()
+while MinEntropy() != -1:
+   Propogate()
 
 def Plot():
     final_arr = np.ndarray((rows*st_w, cols*st_h))
@@ -182,4 +176,5 @@ def Plot():
     final_arr = final_arr.astype(int)
     fimg = Image.fromarray(final_arr.astype('uint8'))
     fimg.show()
-# Plot()
+Plot()
+print(f"{len(protos.keys())=}")

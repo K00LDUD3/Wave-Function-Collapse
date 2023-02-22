@@ -1,5 +1,7 @@
 import numpy as np
 from PIL import Image
+import Info
+
 
 class Prototype:
     code = -1
@@ -26,12 +28,12 @@ class Prototype:
         #North
         edges.append(temp[0].tolist())
         #East
-        edges.append(np.transpose(temp)[st_w-1].tolist()[::-1])
+        edges.append(np.transpose(temp)[st_w-1].tolist())
         #South
         edges.append(temp[st_h-1].tolist()[::-1])
         #West
         edges.append(np.transpose(temp)[0].tolist()[::-1])
         return edges
     
-    # @property
-    # def Shift(self):
+    def Shift(self, step : int, direction : int):
+        return self.EdgePixels[step*direction:] + self.EdgePixels[:step*direction]
