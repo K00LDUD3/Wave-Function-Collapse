@@ -23,6 +23,7 @@ print(len(patterns.keys()))
 
 
 #ALGORITHM STARTS HERE
+collasped = np.full((info.map_size[0], info.map_size[1]), False, dtype=bool)
 candidates = np.full((info.map_size[0], info.map_size[1], len(patterns.keys())), list(patterns.keys())).tolist()
 def MinEntropy():
     min_entropy = len(patterns.keys()) + 1
@@ -47,6 +48,7 @@ def CollapseTile(cell):
     print(f"{msg} --- {code=}")
     Map[x][y] = code
     candidates[x][y] = [code]
+    collasped[x][y] = True
 
 def UpdateNeighbours(cell):
     x,y = cell
@@ -80,11 +82,9 @@ def Propogate():
     print(Map)
 
     # 3:
-    UpdateNeighbours(cell=cell)
-    
+    UpdateNeighbours(cell=cell)    
+while not collasped.all():
     Propogate()
-
-Propogate()
 def Plot():
     final_arr = np.ndarray((info.map_size[0]*info.tile_w, info.map_size[1]*info.tile_w))
     for i in range(info.map_size[0]):

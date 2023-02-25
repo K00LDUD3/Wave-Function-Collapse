@@ -1,7 +1,7 @@
 from PIL import Image
 from numpy import array
 
-inp_img = Image.open("caves3.png")
+inp_img = Image.open("sample2.png")
 img_arr = array(inp_img.convert("L"))
 map_size = [5,5]
 
