@@ -47,16 +47,15 @@ for i in range(st_rows):
                 img_info_list[i][j][x][y] = img_arr[i*st_w+x][j*st_w+y]
         temp = Image.fromarray(img_info_list[i][j].astype('uint8')).convert("1")
         tile_img_list[i][j] = temp
-        print(img_info_list[i][j])
+        # print(img_info_list[i][j])
 
 info.tile_img_list = tile_img_list
 from Patterns_2 import Prototype
 
 for i in range(st_rows):
     for j in range(st_cols):
-        #getting neighbor cells coordinates from the tile set
-        patterns[Prototype.code] = Prototype([i,j])
-        pass
+        for rot_ind in range(4):
+            patterns[Prototype.code] = Prototype([i,j], rot_ind)
 
 
 #Displaying the tile set
@@ -72,89 +71,60 @@ for i in range(st_rows):
 candidates = np.full((rows, cols, len(patterns.keys())), list(patterns.keys())).tolist()
 collapsed = np.full((rows, cols), False, dtype=bool)
 
-#returning cell with minimum possibilites and -1 if none
+
+#Algorithm
 def MinEntropy():
-    min_entr = len(patterns.keys())+1
+    min_entropy = len(patterns.keys()) + 1
     cell = -1
+
     for i in range(rows):
         for j in range(cols):
-            if not collapsed[i][j] and min_entr > len(candidates[i][j]):
+            if len(candidates[i][j]) < min_entropy and not collapsed[i][j]:
+                min_entropy = len(candidates[i][j])
                 cell = [i,j]
-                min_entr = len(candidates[i][j])
+
     return cell
-#Collapsing minimum entropy tile with weighted random sampling 
+
 def CollapseTile(cell : list):
-    #Getting highest probability factor for candidates that are valid
-    candidate = -1
-    prob = 0.0
-    prob_facs = []
-    for i in candidates[cell[0]][cell[1]]:
-        prob_facs.append(patterns[i].prob_fac)
-    # code = random.choices(candidates[cell[0]][cell[1]], weights=prob_facs, k=1)
-    code = -1
+    x,y = cell
     try:
-        code = random.choice(candidates[cell[0]][cell[1]])
+        code = random.choice(candidates[x][y])
+        msg = "CALC"
     except:
-        
-        #Get rotations of each cell and get random from one of them
-        code = [i for i in list(patterns.keys())]
-        #Getting collapsed neighbors sockets
-        n_cells = [[(cell[0]-1)%rows,cell[1]], [cell[0], (cell[1]+1)%cols],[(cell[0]+1)%rows, cell[1]],[cell[0], (cell[1]-1)%cols]]
-        sockets = []
-        for i in range(len(n_cells)):
-            if Map[n_cells[i][0]][n_cells[i][0]] >=0:
-                sockets.append(patterns[Map[n_cells[i][0]][n_cells[i][1]]].edgePixels[(i+2)%4][::-1])
-                print(sockets)
-            else:
-                sockets.append(-1)
-        for i in range(len(code)):
-            new_codes = []
-            for j in sockets:
-                if sockets[j] == -1:
-                    continue
-                for candidate in code:
-                    if sockets[j] == patterns[candidate].edgePixels[j]:
-                        new_codes.append(code[j])
-            code = new_codes.copy()
-        print(code)
-        code = random.choice([i for i in list(patterns.keys())])
-    candidates[cell[0]][cell[1]] = [code]
+        code = random.choice(list(patterns.keys()))
+        msg = "RAND"
+    print(f"C{cell} -- {code=} <{msg}>")
+
     
-    #Setting cell to certain code
-    Map[cell[0]][cell[1]] = code
-    collapsed[cell[0]][cell[1]] = True
+    candidates[x][y] = [code]
+    collapsed[x][y] = True
+    Map[x][y] = code
+
     return
-def UpdateCandidates(cell):
-    #Getting the current cell's 4 neighbor's edge and corner cells
-    n_corner_cells = patterns[Map[cell[0]][cell[1]]].cornerNeighbors
-    n_edge_cells = patterns[Map[cell[0]][cell[1]]].edgeNeighbors
-    
-    #list of neighbor cells in the Final MAP
-    n_cells = [[(cell[0]-1)%rows,cell[1]], [cell[0], (cell[1]+1)%cols],[(cell[0]+1)%rows, cell[1]],[cell[0], (cell[1]-1)%cols]]
-    
-    #Iterating thru each of them in the order of NESW
-    for _dir, n_cell in enumerate(n_cells):
-        #IF collapsed, dont bother computing 
-        if Map[n_cell[0]][n_cell[1]] >= 0:
+
+def UpdateNCells(c_cell : list):
+    # Neighbor cells:
+    x,y = c_cell
+    ncells = N,E,S,W = [[(x-1)%rows, y],[x,(y+1)%cols],[(x+1)%rows,y],[x,(y-1)%cols]]
+    print(Map)
+    print(f"{ncells = }")
+    # Go thru candiates of neighbor cells
+    # Adding the candidates to new list 
+    new_candidates = []
+    # Get necessary side
+    for _dir,(r,c) in enumerate(ncells):
+        if collapsed[r][c]:
+            print(f"{r},{c} collapsed already, skip iter...\n")
             continue
-
-        #Getting the direction tied neighbor of the collapsed cell from the TILESET list
-        x = patterns[Map[cell[0]][cell[1]]].edgeNeighbors
-        x = x[_dir]
-
-        n_edge = patterns[x[0]*st_rows + x[1]].edgePixels
-        n_edge = n_edge[(_dir+2)%4]
-        new_candidates = []
-        print("="*20+str(Map[cell[0]][cell[1]])+"="*20)
-        print(f"{x=} {dirc[_dir]} Neighbor")
-        print(f"Old candidates({n_cell[0]}{n_cell[1]}): {candidates[n_cell[0]][n_cell[1]]}")
-        for candidate in candidates[n_cell[0]][n_cell[1]]:
-            candidate_edge = (patterns[candidate].edgePixels)[(_dir+2)%4]
-            if n_edge == candidate_edge:
-                print(f"{n_edge=} vs {candidate_edge=} '------MATCH'")
-                new_candidates.append(candidate)
-        candidates[n_cell[0]][n_cell[1]] = new_candidates
-        print(f"New candidates({n_cell[0]},{n_cell[1]}): {candidates[n_cell[0]][n_cell[1]]}")
+        for candidate in candidates[r][c]:
+            # Comparing sockets of candidate and required sockets
+            candidate_edges = patterns[candidate].EdgePixels()
+            candidate_edges_req = candidate_edges[(_dir+2)%4]
+            # Compare with collapsed tiles neighbor
+            if patterns[Map[x][y]].valid_sockets[_dir] == candidate_edges_req[::-1]:
+                print(f"{patterns[Map[x][y]].valid_sockets[_dir]} --- MATCH: {_dir=}, {candidate=}, {candidate_edges=}")
+                new_candidates.append(candidate)    
+        candidates[r][c] = new_candidates.copy()
     return
 def Propogate():
     """
@@ -163,27 +133,26 @@ def Propogate():
     3: Set the neighbour cell sockets for EDGE and CORNERS
     4: Eliminate CANDIDATES which dont match in neighbour cells 
     """
+
     # 1:
     cell = MinEntropy()
-
-    #2:
     if cell == -1:
         return
-    CollapseTile(cell=cell)
-    print(f"Curent CELL --- {cell[0]},{cell[1]}")
-    print(Map)
+    # 2:
+    CollapseTile(cell)
 
-    #3:
-    UpdateCandidates(cell=cell)
+    # 3:
+    UpdateNCells(cell)
 
-    return
-while not collapsed.all():
     Propogate()
-
+    return
+Propogate()
 def Plot():
     final_arr = np.ndarray((rows*st_w, cols*info.tile_w))
     for i in range(rows):
         for j in range(cols):
+            if Map[i][j] == -1:
+                continue
             temp = patterns[Map[i][j]].Img_inf.copy()
             for x in range(st_w):
                 for y in range(info.tile_w):
@@ -192,4 +161,3 @@ def Plot():
     fimg = Image.fromarray(final_arr.astype('uint8'))
     fimg.show()
 Plot()
-# plt.savefig("tileset.png")
