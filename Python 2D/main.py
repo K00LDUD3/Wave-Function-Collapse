@@ -18,8 +18,8 @@ patterns = {}
 for i in range(rows):
     for j in range(cols):
         for _dir in range(4):
-            patterns[Prototype.code] = Prototype((i,j), _dir)
-print(len(patterns.keys()))
+            patterns[Prototype.code] = Prototype((i*info.tile_w,j*info.tile_w), _dir)
+
 
 
 #ALGORITHM STARTS HERE
@@ -83,9 +83,11 @@ def Propogate():
 
     # 3:
     UpdateNeighbours(cell=cell)    
-while not collasped.all():
-    Propogate()
+# while not collasped.all():
+    # Propogate()
+final_arr = ''
 def Plot():
+    global final_arr
     final_arr = np.ndarray((info.map_size[0]*info.tile_w, info.map_size[1]*info.tile_w))
     for i in range(info.map_size[0]):
         for j in range(info.map_size[1]):
@@ -98,4 +100,69 @@ def Plot():
     final_arr = final_arr.astype(int)
     fimg = Image.fromarray(final_arr.astype('uint8'))
     fimg.show()
-Plot()
+# Plot()
+
+
+"""
+============================
+============================
+============================
+some postprocessing
+============================
+============================
+============================
+"""
+
+
+POSITIVE = 255
+img_preprocessed = np.array(Image.open('Preprocessed.png'))
+print(img_preprocessed)
+
+covered = np.interp(img_preprocessed, [0,255], [1,0]).astype(int)
+print(f"[{covered=}]")
+post_img = np.full((img_preprocessed.shape), 0)
+rows,cols = img_preprocessed.shape
+stack = []
+
+def GetForeground(img, coors):
+    x,y = coors
+    global POSITIVE
+    if img[x][y] == POSITIVE:
+        covered[x][y] = 1
+        img[x][y] = 0
+    n_cells = [[x-1,y],[x,y+1],[x+1,y],[x,y-1]]
+    for _dir, (r,c) in enumerate(n_cells):
+        if not 0<=r<img_preprocessed.shape[0] or not 0<=c<img_preprocessed.shape[1] or covered[r][c]:
+            # print(f"Removing {n_cells[_dir] = }")
+            n_cells[_dir] = -1
+            
+    return n_cells, img
+
+
+
+
+flag = False
+start_coors = []
+for i in range(img_preprocessed.shape[0]):
+    for j in range(img_preprocessed.shape[1]):
+        if img_preprocessed[i][j] == 255:
+            start_coors =  [i,j]
+            flag = True
+            break
+    if flag:
+        break
+
+print(post_img)
+print(covered)
+
+
+stack = [start_coors]
+while stack != []:
+    n_cells, img_preprocessed = GetForeground(img_preprocessed,stack[-1])
+    ro, co = stack.pop()
+    post_img[ro][co] = 255
+    n_cells_new = [val for val in n_cells if val!=-1]
+    stack.extend(n_cells_new)
+
+fimg = Image.fromarray(post_img.astype('uint8'))
+fimg.show()
