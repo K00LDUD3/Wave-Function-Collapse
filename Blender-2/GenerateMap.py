@@ -1,17 +1,17 @@
 from PIL import Image
 import numpy as np
 import random
-import math
 import matplotlib.pyplot as plt
 import Info as info
 from Prototypes import Prototype
-
+import pickle
 
 inp_img = info.inp_img
 img_bw = inp_img.convert("L")
 img_arr = info.img_arr
 Map = np.full(info.map_size, -1)
 rows, cols = info.st_rows, info.st_cols
+video_frames = []
 
 #Creating patches (st_w)X(st_h) and adding it to patterns dictionary
 patterns = {}
@@ -79,13 +79,18 @@ def Propogate():
     if cell == -1:
         return
     CollapseTile(cell=cell)
+    video_frames.append(Map)
     print(Map)
 
     # 3:
     UpdateNeighbours(cell=cell)    
-# while not collasped.all():
-    # Propogate()
+while not collasped.all():
+    Propogate()
 final_arr = ''
+
+
+
+
 def Plot():
     global final_arr
     final_arr = np.ndarray((info.map_size[0]*info.tile_w, info.map_size[1]*info.tile_w))
@@ -100,7 +105,9 @@ def Plot():
     final_arr = final_arr.astype(int)
     fimg = Image.fromarray(final_arr.astype('uint8'))
     fimg.show()
-# Plot()
+Plot()
+#Saving the map numpy array
+np.save("MapArray", final_arr)
 
 
 """
@@ -112,57 +119,72 @@ some postprocessing
 ============================
 ============================
 """
+post_iterations = 0
+POSITIVE = 0
+NEGATIVE = 255
+def PostProcessing(negate_coors : list):
+    # post_iterations+=1
+    
+    img_preprocessed = final_arr
+    print(img_preprocessed)
+
+    covered = np.interp(img_preprocessed, [0,255], [1,0]).astype(int)
+    print(f"[{covered=}]")
+    post_img = np.full((img_preprocessed.shape), NEGATIVE)
+    rows,cols = img_preprocessed.shape
+    stack = []
+
+    def GetForeground(img, coors):
+        _ = input("")
+        x,y = coors
+        global POSITIVE
+        if img[x][y] == POSITIVE:
+            covered[x][y] = 1
+            img[x][y] = NEGATIVE
+        n_cells = [[x-1,y],[x,y+1],[x+1,y],[x,y-1]]
+        for _dir, (r,c) in enumerate(n_cells):
+            if not 0<=r<img_preprocessed.shape[0] or not 0<=c<img_preprocessed.shape[1] or covered[r][c]:
+                # print(f"Removing {n_cells[_dir] = }")
+                n_cells[_dir] = -1
+                
+        return n_cells, img
 
 
-POSITIVE = 255
-img_preprocessed = np.array(Image.open('Preprocessed.png'))
-print(img_preprocessed)
-
-covered = np.interp(img_preprocessed, [0,255], [1,0]).astype(int)
-print(f"[{covered=}]")
-post_img = np.full((img_preprocessed.shape), 0)
-rows,cols = img_preprocessed.shape
-stack = []
-
-def GetForeground(img, coors):
-    x,y = coors
-    global POSITIVE
-    if img[x][y] == POSITIVE:
-        covered[x][y] = 1
-        img[x][y] = 0
-    n_cells = [[x-1,y],[x,y+1],[x+1,y],[x,y-1]]
-    for _dir, (r,c) in enumerate(n_cells):
-        if not 0<=r<img_preprocessed.shape[0] or not 0<=c<img_preprocessed.shape[1] or covered[r][c]:
-            # print(f"Removing {n_cells[_dir] = }")
-            n_cells[_dir] = -1
-            
-    return n_cells, img
 
 
-
-
-flag = False
-start_coors = []
-for i in range(img_preprocessed.shape[0]):
-    for j in range(img_preprocessed.shape[1]):
-        if img_preprocessed[i][j] == 255:
-            start_coors =  [i,j]
-            flag = True
+    flag = False
+    start_coors = []
+    for i in range(img_preprocessed.shape[0]):
+        for j in range(img_preprocessed.shape[1]):
+            if img_preprocessed[i][j] == POSITIVE and [i,j] not in negate_coors:
+                start_coors =  [i,j]
+                negate_coors.append([i,j])
+                flag = True
+                break
+        if flag:
             break
-    if flag:
-        break
 
-print(post_img)
-print(covered)
+    print(post_img)
+    print(covered)
 
 
-stack = [start_coors]
-while stack != []:
-    n_cells, img_preprocessed = GetForeground(img_preprocessed,stack[-1])
-    ro, co = stack.pop()
-    post_img[ro][co] = 255
-    n_cells_new = [val for val in n_cells if val!=-1]
-    stack.extend(n_cells_new)
+    stack = [start_coors]
+    print(start_coors)
+    while stack != []:
+        n_cells, img_preprocessed = GetForeground(img_preprocessed,stack[-1])
+        ro, co = stack.pop()
+        post_img[ro][co] = POSITIVE
+        n_cells_new = [val for val in n_cells if val!=-1]
+        stack.extend(n_cells_new)
+        print(stack)
 
-fimg = Image.fromarray(post_img.astype('uint8'))
-fimg.show()
+    if np.count_nonzero(post_img != NEGATIVE) >= 0.15 * np.size(post_img):
+        fimg = Image.fromarray(post_img.astype('uint8'))
+        fimg.show()
+        return
+    else:
+        PostProcessing(negate_coors)
+        
+
+# PostProcessing([])
+# videofig(video_frames)

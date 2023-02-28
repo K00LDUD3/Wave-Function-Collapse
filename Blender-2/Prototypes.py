@@ -1,5 +1,6 @@
 import numpy as np
 from Info import tile_w, img_arr
+
 class Prototype:
     code = -1
 
