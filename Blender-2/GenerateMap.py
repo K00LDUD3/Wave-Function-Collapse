@@ -105,9 +105,10 @@ def Plot():
     final_arr = final_arr.astype(int)
     fimg = Image.fromarray(final_arr.astype('uint8'))
     fimg.show()
+    fimg.save("system.png")
 Plot()
 #Saving the map numpy array
-np.save("MapArray", final_arr)
+# np.save("MapArray", final_arr)
 
 
 """

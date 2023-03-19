@@ -2,9 +2,9 @@ import pickle
 from PIL import Image
 from numpy import array
 
-inp_img = Image.open("Tilesets/system.png")
+inp_img = Image.open("Tilesets/roads3.png")
 img_arr = array(inp_img.convert("L"))
-map_size = [10,10]
+map_size = [100,300]
 
 #Tile set vars
 tile_w = 3

@@ -44,7 +44,7 @@ bpy.context.scene.collection.children.link(base_collection)
 instances = bpy.data.collections.new(name="Instances")
 bpy.context.scene.collection.children.link(instances)
 
-plane = FetchMesh(name="Plane")
+plane = FetchMesh(name="plane_with_mat")
 bpy.data.collections['Collection'].objects.unlink(plane)
 
     
